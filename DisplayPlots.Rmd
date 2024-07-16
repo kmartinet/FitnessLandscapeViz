@@ -1,0 +1,84 @@
+---
+title: "Display Saved 3D Plots"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(rgl)
+library(shiny)
+
+# Create a list of saved scene files
+# Designate prefix
+prefix <- "KSB6"
+# Get file names. ASSUMES DATA IS IN SUB-DIRECTORY
+# This will work even if there is only one file name with the given prefix
+filenames <- list.files(pattern = prefix, recursive = TRUE)
+
+# Function to load and display saved rgl scenes
+display_scene <- function(filename) {
+  scene <- readRDS(filename)
+  open3d(useNULL = TRUE)
+  view3d(theta = 0, phi = 30)
+  rglwidget(scene)
+}
+
+```
+
+```{r, echo = FALSE}
+# Create a UI for cycling through the scenes
+shinyApp(
+  ui = fluidPage(
+    tags$head(
+      tags$style(HTML("
+        #rglPlot {
+          height: 800px;
+          width: 100%;
+        }
+        .action-button {
+          font-size: 18px;
+        }
+        .shiny-frame {
+          height: 1000px !important;
+        }
+      "))
+    ),
+    fluidRow(
+      column(12,
+             actionButton("prevBtn", "Previous"),
+             actionButton("nextBtn", "Next")
+      )
+    ),
+    fluidRow(
+      column(12,
+             rglwidgetOutput("rglPlot", width = "100%", height = "800px")
+      )
+    )
+  ),
+  
+  server = function(input, output, session) {
+    currentScene <- reactiveVal(1)
+    
+    observeEvent(input$prevBtn, {
+      current <- currentScene()
+      if (current > 1) {
+        currentScene(current - 1)
+      }
+    })
+    
+    observeEvent(input$nextBtn, {
+      current <- currentScene()
+      if (current < length(filenames)) {
+        currentScene(current + 1)
+      }
+    })
+    
+    output$rglPlot <- renderRglwidget({
+      display_scene(filenames[currentScene()])
+    })
+  }
+)
+
+
+
+```
